@@ -12,3 +12,4 @@ class User:
 
     def get_info(self):
         return f" {self.first_name} {self.last_name}"
+

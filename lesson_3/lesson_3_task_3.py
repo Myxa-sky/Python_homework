@@ -12,3 +12,4 @@ mail = Mailing(
 )
 
 print(mail.get_info())
+

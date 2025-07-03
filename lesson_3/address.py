@@ -13,3 +13,4 @@ class Address:
                 f"{self.street}, "
                 f"{self.house} - "
                 f"{self.apartment}")
+
