@@ -11,4 +11,3 @@ catalog = [
 
 for phone in catalog:
     print(phone.phone_info())
-

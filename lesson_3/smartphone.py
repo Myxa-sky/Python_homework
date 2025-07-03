@@ -7,4 +7,3 @@ class Smartphone:
 
     def phone_info(self):
         return f"{self.brand} - {self.model}. {self.number}."
-
