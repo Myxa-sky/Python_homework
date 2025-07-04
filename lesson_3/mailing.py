@@ -1,4 +1,3 @@
-from email.headerregistry import Address
 from address import Address
 
 class Mailing:
