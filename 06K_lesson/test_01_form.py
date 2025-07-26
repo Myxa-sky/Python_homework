@@ -1,74 +1,66 @@
+import pytest
 from selenium import webdriver
-from selenium.webdriver.edge.service import Service as EdgeService
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
-import pytest
-import os
 
 
 @pytest.fixture
-def browser():
-    driver_path = os.path.join(os.getcwd(), "msedgedriver.exe")
-    service = EdgeService(executable_path=driver_path)
+def driver():
+    # Инициализация Edge с опциями
     options = webdriver.EdgeOptions()
     options.add_argument("--start-maximized")
-    driver = webdriver.Edge(service=service, options=options)
+    driver = webdriver.Edge(options=options)
     yield driver
+    # Закрытие браузера
     driver.quit()
 
 
-def test_form_submission(browser):
-    try:
-        # 1. Открыть страницу
-        browser.get("https://bonigarcia.dev/selenium-webdriver-java/data-types.html")
+def test_form_validation(driver):
+    """Тест проверяет валидацию формы с подсветкой полей"""
+    # 1. Открытие страницы
+    driver.get("https://bonigarcia.dev/selenium-webdriver-java/data-types.html")
 
-        # 2. Дождаться загрузки формы
-        WebDriverWait(browser, 20).until(
-            EC.presence_of_element_located((By.TAG_NAME, "form"))
-        )
+    # 2. Данные для заполнения
+    test_data = {
+        "first-name": "Иван",
+        "last-name": "Petrov",
+        "address": "Ленина, 55-3",
+        "e-mail": "test@skypro.com",
+        "phone": "+79858999887",  # 11 цифр
+        # zip-code оставляем пустым
+        "city": "Москва",
+        "country": "Россия",
+        "job-position": "QA",
+        "company": "SkyPro"
+    }
 
-        # 3. Заполнить форму
-        fields = {
-            "first-name": "Иван",
-            "last-name": "Петров",
-            "address": "Ленина, 55-3",
-            "e-mail": "test@skypro.com",
-            "phone": "+7985899988787",
-            "city": "Москва",
-            "country": "Россия",
-            "job-position": "QA",
-            "company": "SkyPro"
-        }
+    # 3. Заполнение формы
+    for field, value in test_data.items():
+        element = WebDriverWait(driver, 10).until(
+            EC.presence_of_element_located((By.NAME, field)))
+        element.clear()
+        element.send_keys(value)
 
-        for field_name, value in fields.items():
-            element = WebDriverWait(browser, 10).until(
-                EC.presence_of_element_located((By.NAME, field_name))
-            )
-            element.clear()
-            element.send_keys(value)
+    # 4. Отправка формы
+    WebDriverWait(driver, 10).until(
+        EC.element_to_be_clickable((By.CSS_SELECTOR, "button[type='submit']"))).click()
 
-        # 4. Оставить поле Zip code пустым
+    # 5. Проверка результатов
+    WebDriverWait(driver, 10).until(
+        EC.presence_of_element_located((By.CSS_SELECTOR, ".alert")))
 
-        # 5. Нажать кнопку Submit
-        submit = WebDriverWait(browser, 10).until(
-            EC.element_to_be_clickable((By.XPATH, "//button[@type='submit']"))
-        )
-        submit.click()
+    # Проверка zip-code
+    zip_code = driver.find_element(By.ID, "zip-code")
+    assert all([
+        "alert-danger" in zip_code.get_attribute("class"),
+        zip_code.text == "N/A"
+    ]), "Zip code должен быть подсвечен красным с текстом N/A"
 
-        # 6. Проверить, что произошел переход на новую страницу
-        WebDriverWait(browser, 10).until(
-            EC.url_contains("data-types-submitted.html")
-        )
-
-        # 7. Проверить, что в URL присутствуют переданные параметры
-        current_url = browser.current_url
-        assert "first-name=%D0%98%D0%B2%D0%B0%D0%BD" in current_url
-        assert "last-name=%D0%9F%D0%B5%D1%82%D1%80%D0%BE%D0%B2" in current_url
-        assert "zip-code=" in current_url  # Пустое поле
-
-    except Exception as e:
-        browser.save_screenshot("error.png")
-        print("Current URL:", browser.current_url)
-        print("Page title:", browser.title)
-        raise e
+    # Проверка остальных полей
+    for field, expected_value in test_data.items():
+        element = driver.find_element(By.ID, field)
+        assert all([
+            "alert-success" in element.get_attribute("class"),
+            element.text == expected_value
+        ]), f"Поле {field} должно быть валидным со значением {expected_value}"
